@@ -2,6 +2,11 @@
   Completly rewritten by BS
 */
 
+#ifdef _MSC_VER 
+#define strncasecmp _strnicmp
+#define strcasecmp _stricmp
+#endif
+
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,13 +31,42 @@ bool verbose;
 lynxrom ROM;
 char* ROMname;
 
-bool ExtractName(char* fname)
+//*****************************************************************************
+// strcasestr is not part of the standard, so here is a custom implementation
+
+char* myStrcasestr(const char* haystack, const char* needle) {
+    /* Edge case: The empty string is a substring of everything. */
+    if (!needle[0]) return (char*)haystack;
+
+    /* Loop over all possible start positions. */
+    for (size_t i = 0; haystack[i]; i++) {
+        bool matches = true;
+        /* See if the string matches here. */
+        for (size_t j = 0; needle[j]; j++) {
+            /* If we're out of room in the haystack, give up. */
+            if (!haystack[i + j]) return NULL;
+
+            /* If there's a character mismatch, the needle doesn't fit here. */
+            if (tolower((unsigned char)needle[j]) !=
+                tolower((unsigned char)haystack[i + j])) {
+                matches = false;
+                break;
+            }
+        }
+        if (matches) return (char*)(haystack + i);
+    }
+    return NULL;
+}
+
+//*****************************************************************************
+
+void ExtractName(char* fname)
 {
   int l;
   char* c, *d;
   l = strlen(fname);
   ROMname = new char[l + 5];
-  strcpy(ROMname, fname);
+  strcpy_s(ROMname, l + 5, fname);
   c = strrchr(ROMname, '.');
   d = strrchr(ROMname, '/');
 
@@ -52,7 +86,7 @@ bool ParseMAK(char* fname)
     char* c, nn[65];
     c = strrchr(fname, '/');
     if (c == 0) c = fname;
-    strncpy(nn, c, 64);
+    strncpy_s(nn, 65, c, 64);
     nn[64] = 0;
     c = strrchr(nn, '.');
     if (c) *c = 0;
@@ -60,7 +94,7 @@ bool ParseMAK(char* fname)
   }
 
 
-  fh = fopen(fname, "rt");
+  fopen_s(&fh, fname, "rt");
   if (fh == 0) return (false);
 
   while (!feof(fh)) {
@@ -198,7 +232,7 @@ bool ParseMAK(char* fname)
         mode = MODE_EPICS;
       } else if (strnicmp(c + 1, "COPY", 4) == 0) {
         int nr=-2;
-        if(sscanf(c+5,"%d",&nr)!=1) nr=-2;// reference last one 
+        if(sscanf_s(c+5,"%d",&nr)!=1) nr=-2;// reference last one 
         ROM.AddCopy( nr, mode, offset); // fileadr
         align = false;
         title = false;
@@ -268,7 +302,7 @@ bool add_lnx_header(const char* fn2, int len)
   char* m = new char[len];
 
   FILE* fh;
-  fh = fopen(fn2, "rb");
+  fopen_s(&fh, fn2, "rb");
   if (!fh) {
     printf("\nCannot read %s.\n", fn2);
     exit(1);
@@ -277,22 +311,26 @@ bool add_lnx_header(const char* fn2, int len)
   fclose(fh);
 
   char* fn;
-  fn = new char[strlen(fn2) + 5];
-  strcpy(fn, fn2);
+  size_t length = strlen(fn2) + 5;
+  fn = new char[length];
+  strcpy_s(fn, length, fn2);
 
   char* bn;
   bn = strrchr(fn, '.');
-  if (bn) strcpy(bn, ".lnx");
-  else strcat(bn, ".lnx");
+  if (bn) strcpy_s(bn, length, ".lnx");
+  else strcat_s(bn, length, ".lnx");
 
   printf("Writing to %s\n", fn);
-  fh = fopen(fn, "wb+");
+  fopen_s(&fh, fn, "wb+");
   if (fh == 0) return (false);
 
   ll = new struct LNX_STRUCT;
 
   memset(ll, 0, sizeof(struct LNX_STRUCT));
-  strcpy((char*)ll->magic, "LYNX");
+  ll->magic[0] = 'L';
+  ll->magic[1] = 'Y';
+  ll->magic[2] = 'N';
+  ll->magic[3] = 'X';
 
   ll->page_size_bank0 = len >> 8;
   printf("using Blocksize of %d bytes\n", ll->page_size_bank0);
@@ -303,9 +341,9 @@ bool add_lnx_header(const char* fn2, int len)
   if (bn == 0) bn = fn;
   bn = strrchr(fn, '\\');
   if (bn == 0) bn = fn;
-  strncpy((char*)ll->cartname, bn, 32);
+  strncpy_s((char*)ll->cartname, 32, bn, 32);
   ((char*)ll->cartname)[31] = 0;
-  strncpy((char*)ll->manufname, "lynxdir (c) B.S.", 16);
+  strncpy_s((char*)ll->manufname, 16, "lynxdir (c) B.S.", 16);
   ((char*)ll->manufname)[15] = 0;
   // ll->rotation=0;
 
@@ -430,7 +468,7 @@ int main(int argc, char* argv[])
     len = ROM.FileLength(argv[argc_filename]);
 
     FILE* fh;
-    fh = fopen(argv[argc_filename], "rb");
+    fopen_s(&fh, argv[argc_filename], "rb");
     if (!fh) {
       printf("\nCannot read %s.\n", argv[argc_filename]);
       exit(1);
@@ -446,7 +484,7 @@ int main(int argc, char* argv[])
              "You might consider using make_lnx for this task next time!\n");
       add_lnx_header(argv[argc_filename], len);
       exit(0);
-    } else if (strcasestr(argv[argc_filename], ".lyx")) {
+    } else if (myStrcasestr(argv[argc_filename], ".lyx")) {
       printf("\n%s is a ROM image. The only thing I could do with that is remove the checksumming and add a LNX header...\n",
              argv[argc_filename]);
       printf("BUT!!! removing checksumming is not working automatically for all ROMS\n" \
@@ -456,7 +494,7 @@ int main(int argc, char* argv[])
       exit(100);
     } else if ((len == 128 * 1024 + sizeof(struct LNX_STRUCT) || len == 256 * 1024 + sizeof(struct LNX_STRUCT)
                 || len == 512 * 1024 + sizeof(struct LNX_STRUCT)) ||
-               (header[0] == 'L' && header[1] == 'Y' && header[2] == 'N' && header[3] == 'X') ||  strcasestr(argv[argc_filename], ".lyx")) {
+               (header[0] == 'L' && header[1] == 'Y' && header[2] == 'N' && header[3] == 'X') || myStrcasestr(argv[argc_filename], ".lyx")) {
       printf("\n%s is a LNX image. The only thing I could do with that is removing the checksumming...\n", argv[argc_filename]);
       printf("BUT!!! this might not work for every ROM, therefore...\n=> I will quit here!\n");
       exit(100);
@@ -496,12 +534,13 @@ int main(int argc, char* argv[])
   ROM.built();
 
   char* n;
-  n = new char[strlen(ROMname) + 5];
-  strcpy(n, ROMname);
-  strcat(n, ".lyx");
+  size_t length = strlen(ROMname) + 5;
+  n = new char[length];
+  strcpy_s(n, length, ROMname);
+  strcat_s(n, length, ".lyx");
   ROM.savelyx(n);
-  strcpy(n, ROMname);
-  strcat(n, ".lnx");
+  strcpy_s(n, length, ROMname);
+  strcat_s(n, length, ".lnx");
   ROM.savelnx(n);
   delete []n;
   return (0);

@@ -59,7 +59,7 @@ unsigned long lynxrom::FileLength(char* fn)
   unsigned long len;
   FILE* fh;
 
-  fh = fopen(fn, "rb");
+  fopen_s(&fh, fn, "rb");
   if (fh == 0) return (0);
 
   fseek(fh, 0L, SEEK_END);
@@ -76,7 +76,7 @@ unsigned long lynxrom::LoadFile(struct FILE_PAR* file)
   FILE* fh;
 
   if (file->fname == 0) return (0);
-  fh = fopen(file->fname, "rb");
+  fopen_s(&fh, file->fname, "rb");
   if (fh == 0) return (0);
 
   file->memory = new unsigned char[file->filesize];
@@ -97,7 +97,7 @@ void lynxrom::init(void)
   delimp = false;
   filler = false;
   fillrand = false;
-  fillerchar = 0xFF;
+  fillerchar = (char) 0xFF;
   data = 0;
   
   loader=L_UNDEF;
@@ -120,7 +120,7 @@ void lynxrom::init(void)
   writelnx = true;
   lnxrot = 0;
 
-  strcpy(lnxmanu, "lynxdir (c) B.S.");
+  strcpy_s(lnxmanu, 65, "lynxdir (c) B.S.");
 }
 
 void lynxrom::SetBlockSize(int s)
@@ -181,7 +181,7 @@ void lynxrom::init_rom(int bs, int bc, int ai, int b2)
   memset(data, fillerchar, nMaxSize);
 
   if (fillrand) {
-    for (int i = 0; i < nMaxSize; i++) data[i] = random() & 0xFF;
+    for (int i = 0; i < nMaxSize; i++) data[i] = rand() & 0xFF;
   }
 }
 
@@ -197,8 +197,9 @@ bool lynxrom::AddFile(char* fname, bool bootpic, bool blockalign, bool mode, int
       if (*c == '\\') *c = '/';
       c++;
     }
-    FILES[FILE_ANZ].fname = new char[strlen(fname) + 1];
-    strcpy(FILES[FILE_ANZ].fname, fname);
+    size_t length = strlen(fname) + 1;
+    FILES[FILE_ANZ].fname = new char[length];
+    strcpy_s(FILES[FILE_ANZ].fname, length, fname);
     FILES[FILE_ANZ].filesize = FileLength(fname);
 //    FILES[FILE_ANZ].filesize = ((FILES[FILE_ANZ].filesize + 1) & 0xfffffffe);// WORKAROUND... BUT WHY
 
@@ -267,46 +268,47 @@ bool lynxrom::savelyx(char* fn)
 
   printf("== blocksize %d ncardlen %d maxsize %d audin %d bank2 %d\n", blocksize, nCartLen, nMaxSize, (int)audin, (int)bank2);
   char* c;
-  c = new char[strlen(fn) + 20];
+  size_t length = strlen(fn) + 20;
+  c = new char[length];
 
   int banksize = blocksize * 256;
   int offset = 0;
 
   if (audin) {
-    strcpy(c, fn);
-    strcat(c, "_aud0_bank0.lyx");
+    strcpy_s(c, length, fn);
+    strcat_s(c, length, "_aud0_bank0.lyx");
     printf("Writing to %s\n", c);
-    fh = fopen(c, "wb+");
+    fopen_s(&fh, c, "wb+");
     if (fh == 0) return (false);
     if (fwrite(data + offset, 1, banksize, fh) != banksize) printf("Error: Couldn't write %s !\n", fn);
     offset += banksize;
     fclose(fh);
 
     if (bank2) {
-      strcpy(c, fn);
-      strcat(c, "_aud0_bank1.lyx");
+      strcpy_s(c, length, fn);
+      strcat_s(c, length, "_aud0_bank1.lyx");
       printf("Writing to %s\n", c);
-      fh = fopen(c, "wb+");
+      fopen_s(&fh, c, "wb+");
       if (fh == 0) return (false);
       if (fwrite(data + offset, 1, banksize, fh) != banksize) printf("Error: Couldn't write %s !\n", fn);
       offset += banksize;
       fclose(fh);
     }
 
-    strcpy(c, fn);
-    strcat(c, "_aud1_bank0.lyx");
+    strcpy_s(c, length, fn);
+    strcat_s(c, length, "_aud1_bank0.lyx");
     printf("Writing to %s\n", c);
-    fh = fopen(c, "wb+");
+    fopen_s(&fh, c, "wb+");
     if (fh == 0) return (false);
     if (fwrite(data + offset, 1, banksize, fh) != banksize) printf("Error: Couldn't write %s !\n", fn);
     offset += banksize;
     fclose(fh);
 
     if (bank2) {
-      strcpy(c, fn);
-      strcat(c, "_aud1_bank1.lyx");
+      strcpy_s(c, length, fn);
+      strcat_s(c, length, "_aud1_bank1.lyx");
       printf("Writing to %s\n", c);
-      fh = fopen(c, "wb+");
+      fopen_s(&fh, c, "wb+");
       if (fh == 0) return (false);
       if (fwrite(data + offset, 1, banksize, fh) != banksize) printf("Error: Couldn't write %s !\n", fn);
       offset += banksize;
@@ -314,26 +316,26 @@ bool lynxrom::savelyx(char* fn)
     }
   } else {
     if (bank2) {
-      strcpy(c, fn);
-      strcat(c, "_bank0.lyx");
+      strcpy_s(c, length, fn);
+      strcat_s(c, length, "_bank0.lyx");
       printf("Writing to %s\n", c);
-      fh = fopen(c, "wb+");
+      fopen_s(&fh, c, "wb+");
       if (fh == 0) return (false);
       if (fwrite(data + offset, 1, banksize, fh) != banksize) printf("Error: Couldn't write %s !\n", fn);
       offset += banksize;
       fclose(fh);
 
-      strcpy(c, fn);
-      strcat(c, "_bank1.lyx");
+      strcpy_s(c, length, fn);
+      strcat_s(c, length, "_bank1.lyx");
       printf("Writing to %s\n", c);
-      fh = fopen(c, "wb+");
+      fopen_s(&fh, c, "wb+");
       if (fh == 0) return (false);
       if (fwrite(data + offset, 1, banksize, fh) != banksize) printf("Error: Couldn't write %s !\n", fn);
       offset += banksize;
       fclose(fh);
     } else {
       printf("Writing to %s\n", fn);
-      fh = fopen(fn, "wb+");
+      fopen_s(&fh, fn, "wb+");
       if (fh == 0) return (false);
 
       if (filler) nCartLen = nMaxSize;
@@ -355,13 +357,16 @@ bool lynxrom::savelnx(char* fn)
   struct LNX_STRUCT* ll;
 
   printf("Writing to %s\n", fn);
-  fh = fopen(fn, "wb+");
+  fopen_s(&fh, fn, "wb+");
   if (fh == 0) return (false);
 
   ll = new struct LNX_STRUCT;
 
   memset(ll, 0, sizeof(struct LNX_STRUCT));
-  strcpy((char*)ll->magic, "LYNX");
+  ll->magic[0] = 'L';
+  ll->magic[1] = 'Y';
+  ll->magic[2] = 'N';
+  ll->magic[3] = 'X';
   ll->page_size_bank0 = blocksize;
   if (bank2) {
     ll->page_size_bank1 = blocksize;
@@ -372,9 +377,9 @@ bool lynxrom::savelnx(char* fn)
   if (bn == 0) bn = fn;
   bn = strrchr(fn, '\\');
   if (bn == 0) bn = fn;
-  strncpy((char*)ll->cartname, lnxname, 32);
+  strncpy_s((char*)ll->cartname, 32, lnxname, 32);
   ((char*)ll->cartname)[31] = 0;
-  strncpy((char*)ll->manufname, lnxmanu, 16);
+  strncpy_s((char*)ll->manufname, 16, lnxmanu, 16);
   ((char*)ll->manufname)[15] = 0;
   ll->rotation = lnxrot;
   ll->aud_bits = 0;
@@ -542,7 +547,7 @@ void lynxrom::ProcessFile(struct FILE_PAR& file)
   oDirectoryPointer += 8;
 }
 
-bool lynxrom::add_files(void)
+void lynxrom::add_files(void)
 {
   int tt = 0;
   struct FILE_PAR* file;
@@ -797,7 +802,7 @@ bool lynxrom::WriteDirZeroEntry(int dirpointer)
 
 bool lynxrom::AnalyseFile(struct FILE_PAR* file)
 {
-  int nTmpFileLength;
+  //int nTmpFileLength;
   unsigned char fflag;
 
   file->pointer = file->memory;
@@ -857,10 +862,10 @@ bool lynxrom::AnalyseFile(struct FILE_PAR* file)
       file->flag = 'I';// Data imploded
       printf("Imploded ");
       if (delimp) { // ... and remove Magic
-        file->data[0] = random() & 0xFF;
-        file->data[1] = random() & 0xFF;
-        file->data[2] = random() & 0xFF;
-        file->data[3] = random() & 0xFF;
+        file->data[0] = rand() & 0xFF;
+        file->data[1] = rand() & 0xFF;
+        file->data[2] = rand() & 0xFF;
+        file->data[3] = rand() & 0xFF;
       }
     }
     // Check if we have PCrunch File
@@ -885,7 +890,7 @@ bool lynxrom::AnalyseFile(struct FILE_PAR* file)
   return (true);
 }
 
-bool lynxrom::built(void)
+void lynxrom::built(void)
 {
   if(loader==L_UNDEF){
     printf("No Loader selected. If you want to create a ROM without loader, please state #NOLOADER\n");

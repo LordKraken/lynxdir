@@ -104,7 +104,7 @@ private:
   bool AnalyseFile(struct FILE_PAR* file);
   bool WriteFileToRom(struct FILE_PAR* file);
   void init_header(void);
-  bool add_files(void);
+  void add_files(void);
   void ProcessFile(struct FILE_PAR& file);
   bool process_files(void);
 
@@ -116,7 +116,7 @@ public:
 
   void init(void);
   void init_rom(int bs, int bc = 256, int ai = false, int b2 = false);
-  bool built(void);
+  void built(void);
   bool savelyx(char* fn);
   bool savelnx(char* fn);
   bool AddFile(char* fh, bool ins, bool align, bool mode, int offset, bool skipbank, int addoff = 0);
@@ -145,13 +145,13 @@ public:
   inline void set_filler(bool f) {filler = f;};
   inline void set_fillrand(bool f) {fillrand = f;};
   inline void set_filler_zero(void) {fillrand = false; fillerchar = 0x00;};
-  inline void set_filler_one(void) {fillrand = false; fillerchar = 0xFF;};
+  inline void set_filler_one(void) {fillrand = false; fillerchar = (char) 0xFF;};
   inline void SetTitleAdr(int a) {titleadr = a;};
   inline void set_write_lyx(bool f) {writelyx = f;};
   inline void set_write_lnx(bool f) {writelnx = f;};
   inline void set_lnxrot(int f) {lnxrot = f;};
-  inline void set_lnxname(const char* c) {strncpy(lnxname, c, 64);};
-  inline void set_lnxmanu(const char* c) {strncpy(lnxmanu, c, 64);};
+  inline void set_lnxname(const char* c) {strncpy_s(lnxname, 65, c, 64);};
+  inline void set_lnxmanu(const char* c) {strncpy_s(lnxmanu, 65, c, 64);};
   inline void set_eeprom_type(int e){ eeprom_type=e;};
   inline void set_eeprom_8bit(void){ eeprom_8bit=true;};
   inline void set_eeprom_16bit(void){ eeprom_8bit=false;};
